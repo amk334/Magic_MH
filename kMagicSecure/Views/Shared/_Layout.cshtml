@@ -1,0 +1,92 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>@ViewBag.Title - kMagic Scores</title>
+	@Styles.Render("~/Content/css")
+	@Scripts.Render("~/bundles/modernizr")
+</head>
+<body>
+	@{
+		try {
+			Exception lastError = (Exception)Session["LastError"];
+			if (lastError != null)
+			{
+			<div class="errorTitle">ERROR: @lastError.Message</div>
+				Session["LastError"] = null;
+			}
+		}
+		catch (Exception ex)
+		{
+			<div class="errorTitle">ERROR: Unknown Error.</div>
+			Session["LastError"] = null;
+		}
+	}
+
+
+
+	<div class="navbar navbar-inverse navbar-fixed-top">
+		<div class="container">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</button>
+				@Html.ActionLink("Magic", "Index", new { controller = "Magic", action = "Default"}, new { @class = "navbar-brand" })
+			</div>
+			<div class="navbar-collapse collapse">
+				<ul class="nav navbar-nav">
+					@try
+					{
+						foreach (Magic.Domain.dbEvent e in ViewBag.CurrentEvents)
+						{
+							<li class="dropdown">
+								<a href="#" data-toggle="dropdown" class="dropdown-toggle">@e.Name<b class="caret"></b></a>
+								<ul class="dropdown-menu">
+									<li>@Html.ActionLink(e.Name + "(1)", "Index", new { controller = "Magic", action = "Index", eventName = e.Name, round = 1 })</li>
+									<li>@Html.ActionLink(e.Name + "(2)", "Index", new { controller = "Magic", action = "Index", eventName = e.Name, round = 2 })</li>
+									<li>@Html.ActionLink(e.Name + "(3)", "Index", new { controller = "Magic", action = "Index", eventName = e.Name, round = 3 })</li>
+									<li>@Html.ActionLink(e.Name + "(*)", "Index", new { controller = "Magic", action = "Index", eventName = e.Name, round = 0 })</li>
+									<li>@Html.ActionLink(e.Name + "(Top 8)", "Index", new { controller = "Magic", action = "Index", eventName = e.Name, round = 4 })</li>
+								</ul>
+							</li>
+						}
+					}
+					catch
+					{
+						var e = new Magic.Domain.dbEvent()
+						{
+							Name = "RNA"
+						};
+						<li class="dropdown">
+							<a href="#" data-toggle="dropdown" class="dropdown-toggle">@e.Name<b class="caret"></b></a>
+							<ul class="dropdown-menu">
+								<li>@Html.ActionLink(e.Name + "(1)", "Index", new { controller = "Magic", action = "Index", eventName = e.Name, round = 1 })</li>
+								<li>@Html.ActionLink(e.Name + "(2)", "Index", new { controller = "Magic", action = "Index", eventName = e.Name, round = 2 })</li>
+								<li>@Html.ActionLink(e.Name + "(3)", "Index", new { controller = "Magic", action = "Index", eventName = e.Name, round = 3 })</li>
+								<li>@Html.ActionLink(e.Name + "(*)", "Index", new { controller = "Magic", action = "Index", eventName = e.Name, round = 0 })</li>
+								<li>@Html.ActionLink(e.Name + "(Top 8)", "Index", new { controller = "Magic", action = "Index", eventName = e.Name, round = 4 })</li>
+							</ul>
+						</li>
+					}
+
+				</ul>
+				@Html.Partial("_loginPartial")
+			</div>
+		</div>
+	</div>
+	<div class="container body-content">
+		@RenderBody()
+		<hr />
+		<footer>
+			<p>&copy; 2015-2016 - MHill kMagic Manager</p>
+		</footer>
+	</div>
+
+	@Scripts.Render("~/bundles/jquery")
+	@Scripts.Render("~/bundles/bootstrap")
+	@RenderSection("scripts", required: false)
+</body>
+</html>

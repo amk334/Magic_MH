@@ -1,0 +1,319 @@
+﻿@{
+	Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@{
+	Magic.Domain.Event mainEvent = ViewBag.Event;
+	int detailMode = ViewBag.DetailMode ?? 0;
+	int round = ViewBag.Round ?? mainEvent.CurrentRound;
+	List<Magic.Domain.Player> players = mainEvent.Players;
+	string eventName = mainEvent.name;
+	int numMatches = mainEvent.RoundMatchCount(round);
+	int maxMatchesPlayed = mainEvent.MaxMatchesPlayed(round);
+	int totalMatchesRemaining = (mainEvent.TotalMatches(round) - mainEvent.TotalMatchesPlayed(round) / 2);
+	TimeSpan timeTillEnd = mainEvent.RoundEndDate - DateTime.Now;
+	int weeksTillEnd = (int)timeTillEnd.TotalDays / 7;
+	int daysTillEnd = (int)timeTillEnd.TotalDays % 7;
+	int hoursTillEnd = (int)timeTillEnd.TotalHours % 24;
+	bool writeAuth = User.Identity.IsAuthenticated;
+	IdentitySample.Models.ApplicationUser user = ViewBag.CurrentUser;
+	string endTimeString;
+	int scoreIndex;
+	IEnumerable<Magic.Domain.dbPlayerPrize> playerPrizeInfo = ViewBag.PlayerPrizeInfo;
+
+	if (weeksTillEnd > 1)
+	{
+		endTimeString = string.Format("{0} weeks, {1} days", weeksTillEnd, daysTillEnd);
+		
+	}
+	else if (weeksTillEnd > 0)
+	{
+		endTimeString = string.Format("{0} week, {1} days", weeksTillEnd, daysTillEnd);
+	}
+	else if (daysTillEnd > 1)
+	{
+		endTimeString = string.Format("{0} days", daysTillEnd);
+	}
+	else if (daysTillEnd > 0)
+	{
+		endTimeString = string.Format("{0} day", daysTillEnd);
+	}
+	else if (timeTillEnd.TotalMilliseconds > 0)
+	{
+		endTimeString = string.Format("{0} hours", hoursTillEnd);
+	}
+	else
+	{
+		endTimeString = "Finished!";
+	}
+}
+
+@{
+	var userName = user == null ? "Not logged in" : user.Email;
+}
+
+@if (playerPrizeInfo?.Any()==true)
+{
+	using (Html.BeginForm("RecievedPrizes", "Magic", FormMethod.Post))
+	{
+		<h2>@Magic.Core.PrizeManager.FormatPrizeInfo(playerPrizeInfo)</h2>
+
+		foreach (var prizeInfoItem in playerPrizeInfo)
+		{
+			<input type="hidden" name="playerID" value="@prizeInfoItem.PlayerID" />
+			<input type="hidden" name="prizeEvent" value="@prizeInfoItem.EventName" />
+			<input type="hidden" name="prizeRound" value="@prizeInfoItem.Round" />
+			<input type="hidden" name="prizePosition" value="@prizeInfoItem.Position" />
+			<input type="hidden" name="prizePacks" value="@prizeInfoItem.Packs" />
+			<input type="hidden" name="prizeRecieved" value="@prizeInfoItem.Recieved" />
+		}
+		<div>
+			<input type="submit" value="I've recieved these prizes" class="btn btn-default" />
+		</div>
+		
+	}
+}
+
+
+@if (round > 0)
+{
+	<h2>Players - @eventName</h2> <br/>
+}
+		else
+		{
+  <h2>Players - @eventName - Event Overview</h2>
+    }
+
+<h2>
+	Round
+	@for (int i = 0; i <= 4; i++)
+	{
+		string roundText = i.ToString();
+		switch (i)
+		{
+			case 0:
+				roundText = "*";
+				break;
+			case 4:
+				roundText = "Top 8";
+				break;
+		}
+
+
+
+		if (round == i)
+		{
+			<text>[@roundText]</text>
+		}
+		else
+		{
+			<text>@Html.ActionLink(roundText, "Index", new { controller = "Magic", action = "Index", eventName = mainEvent.name, round = i })</text>
+		}
+	}
+</h2>
+
+
+
+<h3>Round Ends: @string.Format("{0} - {1}", mainEvent.RoundEndDate.ToString(), endTimeString)</h3>
+
+<table border="1" class="matchTable">
+	<thead class="tableHeader">
+		<tr>
+			<th class="centered namecol">Player</th>
+			@for (int i = 0; i < maxMatchesPlayed; i++)
+			{
+				<th class="centered namecol">Opp. </th>
+				<th class="centered">Games</th>
+								<th class="centered">Result</th>
+			}
+			<th class="centered">Score</th>
+			<th class="centered">Matches Played</th>
+		</tr>
+	</thead>
+	@foreach (Magic.Domain.Player p in players.OrderByDescending(p=>p.Matches.Count).ThenBy(p=>p.Name))
+	{
+		var playerLoggedInClass = p.Email == userName ? "loggedInUser" : "";
+		<tr class="keyplayer @playerLoggedInClass">		
+			<td>
+				<span class="tooltipq">
+						@string.Format("{0}", p.Name)
+						@if (user?.EmailConfirmed == true)
+						{
+							<span class="tooltipqtext">
+								@p.Email
+							</span>
+						}
+					</span>
+			</td>
+			@foreach (Magic.Domain.Match m in p.Matches.Where(m => m.Round == round))
+			{
+				var normalizedMatch = m.WithPlayerOneAs(p.ID);
+				var matchResult = "";
+				if (normalizedMatch.Player1Wins == 0 && normalizedMatch.Player2Wins == 0 && normalizedMatch.Draws <= 1)
+				{ matchResult = ""; }
+				else if ((normalizedMatch.Player1Wins == normalizedMatch.Player2Wins) && (normalizedMatch.Player1Wins + normalizedMatch.Player2Wins + normalizedMatch.Draws) >= 3)
+				{ matchResult = "Draw"; }
+				else if (normalizedMatch.Player1Wins > normalizedMatch.Player2Wins)
+				{ matchResult = "Win"; }
+				else if (normalizedMatch.Player2Wins > normalizedMatch.Player1Wins)
+				{ matchResult = "Loss"; }
+				else
+				{ matchResult = "InProg";  }
+				var matchWin = normalizedMatch.Player1Wins > normalizedMatch.Player2Wins ? "Win" : "Loss";
+				<td class="opponentplayer @playerLoggedInClass">
+					<span class="tooltipq">
+						@normalizedMatch.Player2.Name 
+						@if (user?.EmailConfirmed == true)
+						{
+							<span class="tooltipqtext">
+								@normalizedMatch.Player2.Email
+							</span>
+						}
+					</span>
+				</td>
+
+				string scoreText = string.Format("{0}-{1}", normalizedMatch.Player1Wins, normalizedMatch.Player2Wins);
+				if (writeAuth == true)
+				{
+					<td class="centered"><a class="matchPopupLink @playerLoggedInClass" data-player="@normalizedMatch.Player1.ID" data-opponent="@normalizedMatch.Player2.ID" data-event="@eventName" data-round="@round">@scoreText</a></td>
+				}
+				else
+				{
+					<td class="centered playerLoggedInClass"><div>@scoreText</div></td>
+				}
+
+
+				if (@matchResult == "Win")
+				{
+					<td class="centered wincolor @playerLoggedInClass">@matchResult</td>
+				}
+				else if (@matchResult == "Loss")
+				{
+					<td class="centered losscolor @playerLoggedInClass">@matchResult</td>
+				}
+				else
+				{
+					<td class="centered @playerLoggedInClass">@matchResult</td>
+				}
+			}
+			<td class="playerScore @playerLoggedInClass">@p.Score(round)</td>
+			<td class="playerScore @playerLoggedInClass">@p.matchesCompleted(round)<text>/</text>@mainEvent.RoundMatches</td>
+		</tr>
+	}
+</table>
+<br />
+<table border="1" class="standingTable">
+	<thead class="tableHeader">
+		<tr>
+			<th class="centered">Place</th>
+			<th class="centered">Prize</th>
+			<th class="centered">Player</th>
+			<th class="centered">Score</th>
+			<th class="centered">OMW %</th>
+			<th class="centered">GW %</th>
+			<th class="centered">OGW %</th>
+			<th class="centered">Remaining Matches</th>
+			
+			@if (detailMode >= 1)
+			{
+				<th class="centered">MaxPossScore</th>
+			}
+			@if (detailMode >= 2)
+			{
+				var maxOppCount = mainEvent.Players.Max(p => p.Matches.Count(m=>m.Round==round));
+				for (int i = 0; i < maxOppCount; i++)
+				{
+					<th class="centered">Opponent</th>
+					if(detailMode>=3)
+					{
+						<th class="centered">MW %</th>
+					}
+				}
+			}
+			@if (detailMode > 0)
+			{
+				<th class="centered"><a href="@Url.Action("Index", null, new { controller = "Magic", round = round, eventName = mainEvent.name, detailMode = detailMode -1 }, Request.Url.Scheme)"><</a></th>
+			}
+
+			@if (detailMode < 3)
+			{
+				<th class="centered"><a href="@Url.Action("Index", null, new { controller = "Magic", round = round, eventName = mainEvent.name, detailMode = detailMode + 1 }, Request.Url.Scheme)">></a></th>
+			}
+
+		</tr>
+	</thead>
+	<tbody>
+
+		@{
+			scoreIndex = 1;
+			foreach (Magic.Domain.Player p in players.OrderByDescending(p => p.Score(round)).ThenByDescending(p => p.OMWP(round)).ThenByDescending(p => p.GWP(round)).ThenByDescending(p => p.OGWP(round)))
+			{
+				var remainingMatches = (mainEvent.RoundMatchCount(round) - @p.matchesCompleted(round));
+				var playerLoggedInClass = p.Email == userName ? "loggedInUser" : "";
+
+				<tr>
+					<td class="playerScore @playerLoggedInClass">@(scoreIndex)</td>
+
+					@{
+						Magic.Domain.dbRoundPrize prize = null;
+						if (mainEvent.RoundPrizes != null && mainEvent.RoundPrizes.Count > 0)
+						{
+							prize = mainEvent.RoundPrizes.Where(rp => rp.Round == round && rp.Position == scoreIndex).FirstOrDefault();
+							if (prize != null)
+							{
+								<td class="prize @playerLoggedInClass">@prize.Packs</td>
+							}
+						}
+						if (prize == null)
+						{
+							<td class="noprize playerScore @playerLoggedInClass">0</td>
+						}
+					}
+
+					<td class="keyplayer namecol @playerLoggedInClass">@p.Name</td>
+					<td class="playerScore @playerLoggedInClass">@p.Score(round)</td>
+					<td class="playerScore @playerLoggedInClass">@p.OMWP(round).ToString("F4")<text>%</text></td>
+					<td class="playerScore @playerLoggedInClass">@p.GWP(round).ToString("F4")<text>%</text></td>
+					<td class="playerScore @playerLoggedInClass">@p.OGWP(round).ToString("F4")<text>%</text></td>
+					<td class="playerScore @playerLoggedInClass">@remainingMatches</td>
+					
+					@if (detailMode >= 1)
+					{
+						var maxPossibleScore = @p.Score(round) + remainingMatches * 3;
+						<td class="playerScore @playerLoggedInClass">@maxPossibleScore</td>
+					}
+					@foreach (Magic.Domain.Player o in p.Opponents(round).OrderBy(o => o.Name))
+					{
+						if (detailMode >= 2)
+						{
+							<td class="omwpList @playerLoggedInClass">@o.Name</td>
+						}
+						if (detailMode >= 3)
+						{
+							<td class="omwpList @playerLoggedInClass">@o.MWP(round).ToString("F0")<text>% </text></td>
+						}
+					}
+				</tr>
+				scoreIndex++;
+			}
+		}
+	</tbody>
+</table>
+<br />
+<table border="1" class="standingTable">
+	<tbody>
+		<tr>
+			<td class="keyplayer">Total Remaining Matches</td>
+			<td class="playerScore">@totalMatchesRemaining</td>
+		</tr>
+		<tr>
+			<td class="keyplayer">Players in Event</td>
+			<td class="playerScore">@mainEvent.Players.Count()</td>
+		</tr>
+	</tbody>
+</table>
+
+<div id="matchDialog"></div>
+
+@section scripts{
+	@Scripts.Render("~/bundles/site")
+}

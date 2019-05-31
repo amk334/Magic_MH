@@ -1,0 +1,62 @@
+﻿@model IdentitySample.Models.IndexViewModel
+@{
+    ViewBag.Title = "Manage your account";
+}
+
+<h2>@ViewBag.Title.</h2>
+<p class="text-success">@ViewBag.StatusMessage</p>
+<div class="row">
+    <div class="col-md-8">
+        <p>
+            @if (Model.HasPassword)
+            {
+                @Html.ActionLink("Change your password", "ChangePassword")
+            }
+            else
+            {
+                @Html.ActionLink("Pick a password", "SetPassword")
+            }
+        </p>
+
+			<p>
+				@if (Model.IsConfirmed)
+				{
+					<div class="informationalMessage">Email address is confirmed</div>
+				}
+				else
+				{
+					<div class="informationalMessage">Email address is not confirmed</div>
+				}
+			</p>
+        @using (Html.BeginForm("SetPlayerName", "Manage", FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+					{
+						@Html.AntiForgeryToken();
+
+						if (Model.DisplayName != null)
+						{
+							<h4>Change your player name</h4>
+							<hr />
+
+							@Html.DisplayTextFor(m => m.DisplayName);
+						}
+						else
+						{
+							<h4>Please bind your account to your player name (enter it exactly as it shows in event lists)</h4>
+							<hr />
+						}
+
+
+            <div class="form-group">
+                @Html.LabelFor(m => m.NewDisplayName, new { @class = "col-md-2 control-label" })
+                <div class="col-md-10">
+                    @Html.TextBoxFor(m => m.NewDisplayName, new { @class = "form-control" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-md-offset-2 col-md-10">
+                    <input type="submit" value="Set Display Name or Bind Player" class="btn btn-default" />
+                </div>
+            </div>
+        }
+    </div>
+</div>

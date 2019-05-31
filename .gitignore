@@ -2,7 +2,19 @@
 *.manifest
 *.pdb
 *.exe
-*/bin/*
-*/obj/*
+**/bin/
+**/obj/
 *.cache
 *.dll
+Magic.Core/LocalSetup.cs
+*.force
+MagicScores2/.vs/config/applicationhost.config
+MagicScores2/Magic.Data/LocalSetup.cs
+*.csproj.user
+**/packages/
+packages/Antlr.3.4.1.9004/Antlr.3.4.1.9004.nupkg
+kMagicSecure/ConnectionStrings.config
+.vs/config/applicationhost.config
+BOO Draft/boo2 pictures/
+*.pubxml
+*.user
